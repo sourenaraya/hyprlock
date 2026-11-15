@@ -21,15 +21,16 @@ void CDbus::initLidWatcher() {
     }
 
     // Read the initial state only, without synthesizing a transition
-    m_upower->getPropertyAsync("LidIsPresent")
+    // (LidIsPresent is device presence and never changes; LidIsClosed is the state)
+    m_upower->getPropertyAsync("LidIsClosed")
         .onInterface(UPPOWER_IFACE)
-        .uponReplyInvoke([](std::optional<sdbus::Error> e, sdbus::Variant lidPresent) {
+        .uponReplyInvoke([](std::optional<sdbus::Error> e, sdbus::Variant lidClosed) {
             if (e) {
                 Log::logger->log(Log::WARN, "lid: UPower unavailable ({}); lid switch idle trigger disabled", e->what());
                 return;
             }
 
-            Log::logger->log(Log::INFO, "lid: initial state lid present: {}", lidPresent.get<bool>());
+            Log::logger->log(Log::INFO, "lid: initial state lid closed: {}", lidClosed.get<bool>());
         });
 
     m_upower->uponSignal("PropertiesChanged").onInterface(DBUS_PROPS_IFACE).call([](const std::string& interface, const std::map<std::string, sdbus::Variant>& properties) {
@@ -37,15 +38,15 @@ void CDbus::initLidWatcher() {
             return;
 
         try {
-            const bool present = properties.at("LidIsPresent").get<bool>();
-            Log::logger->log(Log::INFO, "lid: lid switch, lid present: {}", present);
+            const bool closed = properties.at("LidIsClosed").get<bool>();
+            Log::logger->log(Log::INFO, "lid: lid switch, lid closed: {}", closed);
             if (!g_pAuth)
                 return;
 
-            if (present)
-                g_pAuth->onResume();
-            else
+            if (closed)
                 g_pAuth->onIdle();
+            else
+                g_pAuth->onResume();
         } catch (std::out_of_range&) {}
     });
 }
