@@ -21,6 +21,8 @@ class CFingerprint : public IAuthImplementation {
     virtual std::optional<std::string> getLastFailText();
     virtual std::optional<std::string> getLastPrompt();
     virtual void                       terminate();
+    virtual void                       onIdle();
+    virtual void                       onResume();
 
   private:
     struct SDBUSState {
@@ -38,6 +40,8 @@ class CFingerprint : public IAuthImplementation {
 
     std::string m_sPrompt{""};
     std::string m_sFailureReason{""};
+
+    ASP<CTimer> m_pRetryTimer = nullptr;
 
     void        handleVerifyStatus(const std::string& result, const bool done);
 

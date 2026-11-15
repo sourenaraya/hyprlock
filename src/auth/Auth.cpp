@@ -37,6 +37,18 @@ bool CAuth::checkWaiting() {
     return std::ranges::any_of(m_vImpls, [](const auto& i) { return i->checkWaiting(); });
 }
 
+void CAuth::onIdle() {
+    for (const auto& i : m_vImpls) {
+        i->onIdle();
+    }
+}
+
+void CAuth::onResume() {
+    for (const auto& i : m_vImpls) {
+        i->onResume();
+    }
+}
+
 const std::string& CAuth::getCurrentFailText() {
     return m_sCurrentFail.failText;
 }

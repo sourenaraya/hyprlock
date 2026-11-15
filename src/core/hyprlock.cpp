@@ -327,7 +327,15 @@ void CHyprlock::run() {
                 makeShared<CCZwlrScreencopyManagerV1>((wl_proxy*)wl_registry_bind((wl_registry*)r->resource(), name, &zwlr_screencopy_manager_v1_interface, 3));
         else if (IFACE == wl_shm_interface.name)
             m_sWaylandState.shm = makeShared<CCWlShm>((wl_proxy*)wl_registry_bind((wl_registry*)r->resource(), name, &wl_shm_interface, 1));
-        else
+        else if (IFACE == ext_idle_notifier_v1_interface.name) {
+            if (version < 2) {
+                Log::logger->log(Log::WARN, "ext_idle_notify_v1 version {} unsupported, needs v2; inactivity idle trigger disabled", version);
+                return;
+            }
+
+            m_sWaylandState.idleNotify =
+                makeShared<CCExtIdleNotifierV1>((wl_proxy*)wl_registry_bind((wl_registry*)r->resource(), name, &ext_idle_notifier_v1_interface, 2));
+        } else
             return;
 
         Log::logger->log(Log::INFO, "   > Bound to {} v{}", IFACE, version);
@@ -350,6 +358,9 @@ void CHyprlock::run() {
         Log::logger->log(Log::CRIT, "Couldn't bind to ext-session-lock-v1, does your compositor support it?");
         exit(1);
     }
+
+    if (!m_sWaylandState.idleNotify)
+        Log::logger->log(Log::WARN, "ext_idle_notify_v1 not available; inactivity idle trigger disabled");
 
     if (m_sWaylandState.hyprlandSurface) {
         // Fade the live compositor scene instead of a captured desktop frame.
@@ -402,6 +413,28 @@ void CHyprlock::run() {
 
     g_pAuth = makeUnique<CAuth>();
     g_pAuth->start();
+
+    if (m_sWaylandState.idleNotify && g_pSeatManager->registered()) {
+        static const auto INACTIVETIMEOUT = g_pConfigManager->getValue<Hyprlang::INT>("auth:inactivity_timeout");
+        if (*INACTIVETIMEOUT > 0) {
+            const auto IDLENOTIFY = makeShared<CCExtIdleNotificationV1>(
+                m_sWaylandState.idleNotify->sendGetInputIdleNotification(*INACTIVETIMEOUT * 1000, (wl_proxy*)g_pSeatManager->m_pSeat->resource()));
+            m_sWaylandState.idleNotification = IDLENOTIFY;
+
+            IDLENOTIFY->setIdled([](CCExtIdleNotificationV1* r) {
+                Log::logger->log(Log::INFO, "idle-notify: user became idle");
+                if (g_pAuth)
+                    g_pAuth->onIdle();
+            });
+            IDLENOTIFY->setResumed([](CCExtIdleNotificationV1* r) {
+                Log::logger->log(Log::INFO, "idle-notify: user activity resumed");
+                if (g_pAuth)
+                    g_pAuth->onResume();
+            });
+
+            Log::logger->log(Log::INFO, "Idle notification armed: input-only, timeout {}s", *INACTIVETIMEOUT);
+        }
+    }
 
     registerSignalAction(SIGUSR1, handleUnlockSignal, SA_RESTART);
     registerSignalAction(SIGUSR2, handleForceUpdateSignal);

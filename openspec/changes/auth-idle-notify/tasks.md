@@ -25,7 +25,7 @@
 
 - [x] 5.1 Document `auth:inactivity_timeout` and `auth:lid_switch_idle` in `assets/example.conf` (commented, with the seconds/boolean semantics); verify the built hyprlock accepts the shipped example.conf
 - [ ] 5.2 Run the full verification matrix on the laptop: (a) timeout > 0, away with lid open → pause after timeout, resume on input; (b) close lid on AC → immediate pause, open → immediate resume + scan works; (c) battery sleep cycle → release before suspend, resume + scan after wake; (d) timeout 0 → no idle-notify behavior at all; (e) fingerprint disabled (PAM only) → all triggers are no-ops; (f) long lock (>30 min, lid cycled) → no "verify-disconnected" aborts (regression check for #702); verify each step by logs and successful fingerprint unlock
-- [ ] 5.3 Review the diff for compositor-specific assumptions (binding must key off the `ext_idle_notify_v1` global name only; no sway/Hyprland-specific paths); verify by code inspection that a Hyprland session would exercise the identical code path
+- [x] 5.3 Review the diff for compositor-specific assumptions (binding must key off the `ext_idle_notify_v1` global name only; no sway/Hyprland-specific paths); verify by code inspection that a Hyprland session would exercise the identical code path
 
 ## Workflow follow-up
 

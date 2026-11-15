@@ -200,6 +200,15 @@ void CPam::terminate() {
         m_thread.join();
 }
 
+void CPam::onIdle() {
+    // Intentionally empty: PAM conversations need no idle handling yet.
+    // Hook kept for future use (e.g. resetting the conversation after inactivity).
+}
+
+void CPam::onResume() {
+    ;
+}
+
 void CPam::resetConversation() {
     m_sConversationState.input             = "";
     m_sConversationState.waitingForPamAuth = false;

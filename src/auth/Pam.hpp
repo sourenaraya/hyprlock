@@ -41,6 +41,8 @@ class CPam : public IAuthImplementation {
     virtual std::optional<std::string> getLastFailText();
     virtual std::optional<std::string> getLastPrompt();
     virtual void                       terminate();
+    virtual void                       onIdle();
+    virtual void                       onResume();
 
   private:
     std::thread           m_thread;

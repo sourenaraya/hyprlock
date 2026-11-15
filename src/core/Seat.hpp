@@ -21,13 +21,12 @@ class CSeatManager {
 
     UP<CCursorShape>   m_pCursorShape;
 
+    SP<CCWlSeat>       m_pSeat;
+
     xkb_context*       m_pXKBContext      = nullptr;
     xkb_keymap*        m_pXKBKeymap       = nullptr;
     xkb_state*         m_pXKBState        = nullptr;
     xkb_compose_state* m_pXKBComposeState = nullptr;
-
-  private:
-    SP<CCWlSeat> m_pSeat;
 };
 
 inline UP<CSeatManager> g_pSeatManager = makeUnique<CSeatManager>();

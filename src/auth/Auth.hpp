@@ -23,6 +23,11 @@ class IAuthImplementation {
     virtual std::optional<std::string> getLastPrompt()                       = 0;
     virtual void                       terminate()                           = 0;
 
+    // Fired on idle/resume transitions (idle-notify, lid switch, sleep/wake).
+    // Implementations must be idempotent.
+    virtual void                       onIdle()                              = 0;
+    virtual void                       onResume()                            = 0;
+
     friend class CAuth;
 };
 
@@ -34,6 +39,9 @@ class CAuth {
 
     void                       submitInput(const std::string& input);
     bool                       checkWaiting();
+
+    void                       onIdle();
+    void                       onResume();
 
     const std::string&         getCurrentFailText();
 

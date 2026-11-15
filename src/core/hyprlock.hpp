@@ -3,6 +3,7 @@
 #include "../defines.hpp"
 #include "wayland.hpp"
 #include "ext-session-lock-v1.hpp"
+#include "ext-idle-notify-v1.hpp"
 #include "fractional-scale-v1.hpp"
 #include "wlr-screencopy-unstable-v1.hpp"
 #include "linux-dmabuf-v1.hpp"
@@ -137,6 +138,8 @@ class CHyprlock {
         SP<CCHyprlandSurfaceManagerV1>   hyprlandSurface = nullptr;
         SP<CCZwlrScreencopyManagerV1>    screencopy      = nullptr;
         SP<CCWlShm>                      shm             = nullptr;
+        SP<CCExtIdleNotifierV1>          idleNotify      = nullptr;
+        SP<CCExtIdleNotificationV1>      idleNotification = nullptr;
         uint32_t                         dmabufName      = 0;
         uint32_t                         dmabufVersion   = 0;
     } m_sWaylandState;

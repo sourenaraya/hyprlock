@@ -152,6 +152,7 @@ protocolwayland()
 
 protocolnew("protocols" "wlr-screencopy-unstable-v1" true)
 protocolnew("protocols" "hyprland-surface-v1" true)
+protocolnew("protocols" "ext-idle-notify-v1" true)
 protocolnew("staging/ext-session-lock" "ext-session-lock-v1" false)
 protocolnew("stable/linux-dmabuf" "linux-dmabuf-v1" false)
 protocolnew("staging/fractional-scale" "fractional-scale-v1" false)

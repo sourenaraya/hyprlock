@@ -99,8 +99,10 @@ void CFingerprint::init() {
             return;
         Log::logger->log(Log::INFO, "fprint: PrepareForSleep (start: {})", start);
         m_sDBUSState.sleeping = start;
-        if (!m_sDBUSState.sleeping && !m_sDBUSState.verifying)
-            startVerify();
+        if (m_sDBUSState.sleeping)
+            onIdle();
+        else
+            onResume();
     });
 }
 
@@ -125,8 +127,49 @@ bool CFingerprint::checkWaiting() {
 }
 
 void CFingerprint::terminate() {
+    if (m_pRetryTimer) {
+        m_pRetryTimer->cancel();
+        m_pRetryTimer.reset();
+    }
+
     if (!m_sDBUSState.abort)
         releaseDevice();
+}
+
+void CFingerprint::onIdle() {
+    if (m_sDBUSState.done || m_sDBUSState.abort)
+        return;
+
+    // A pending retry would silently restart verification while idle
+    if (m_pRetryTimer) {
+        m_pRetryTimer->cancel();
+        m_pRetryTimer.reset();
+    }
+
+    if (m_sDBUSState.verifying)
+        stopVerify();
+
+    // Also covers the claimed-but-stopped state between a failed scan and its retry
+    if (!m_sDBUSState.device)
+        return;
+
+    Log::logger->log(Log::INFO, "fprint: idle, pausing verification");
+    releaseDevice();
+
+    m_sPrompt = "";
+    g_pHyprlock->enqueueForceUpdateTimers();
+}
+
+void CFingerprint::onResume() {
+    if (m_sDBUSState.done || m_sDBUSState.abort)
+        return;
+
+    if (m_sDBUSState.verifying)
+        return;
+
+    Log::logger->log(Log::INFO, "fprint: resumed, restarting verification");
+    // startVerify re-claims the device if it was released while idle
+    startVerify();
 }
 
 bool CFingerprint::createDeviceProxy() {
@@ -191,8 +234,8 @@ void CFingerprint::handleVerifyStatus(const std::string& result, bool done) {
             } else {
                 done                         = false;
                 static const auto RETRYDELAY = g_pConfigManager->getValue<Hyprlang::INT>("auth:fingerprint:retry_delay");
-                g_pHyprlock->addTimer(std::chrono::milliseconds(*RETRYDELAY), [](ASP<CTimer> self, void* data) { ((CFingerprint*)data)->startVerify(true); }, this);
-                m_sFailureReason = "Fingerprint did not match";
+                m_pRetryTimer                 = g_pHyprlock->addTimer(std::chrono::milliseconds(*RETRYDELAY), [](ASP<CTimer> self, void* data) { ((CFingerprint*)data)->startVerify(true); }, this);
+                m_sFailureReason              = "Fingerprint did not match";
             }
             break;
         case MATCH_UNKNOWN_ERROR:
@@ -248,6 +291,11 @@ void CFingerprint::claimDevice() {
 }
 
 void CFingerprint::startVerify(bool isRetry) {
+    if (m_pRetryTimer) {
+        m_pRetryTimer->cancel();
+        m_pRetryTimer.reset();
+    }
+
     m_sDBUSState.verifying = true;
     if (!m_sDBUSState.device) {
         if (!createDeviceProxy())
