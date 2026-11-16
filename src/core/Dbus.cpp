@@ -31,6 +31,12 @@ void CDbus::initLidWatcher() {
             }
 
             Log::logger->log(Log::INFO, "lid: initial state lid closed: {}", lidClosed.get<bool>());
+
+            // Reply is delivered in the main loop, after g_pAuth->start() claimed the
+            // sensor: if the lock screen started with the lid closed, release it now
+            // (it is physically blocked); the PropertiesChanged handler resumes on open.
+            if (lidClosed.get<bool>() && g_pAuth)
+                g_pAuth->onIdle();
         });
 
     m_upower->uponSignal("PropertiesChanged").onInterface(DBUS_PROPS_IFACE).call([](const std::string& interface, const std::map<std::string, sdbus::Variant>& properties) {

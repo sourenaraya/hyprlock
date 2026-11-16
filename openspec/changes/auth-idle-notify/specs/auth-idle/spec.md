@@ -52,7 +52,7 @@ While idle, the fingerprint implementation SHALL stop verification, release the 
 - **THEN** no verification is restarted
 
 ### Requirement: Lid switch trigger
-When `auth:lid_switch_idle` (integer, 1) is enabled and the UPower service is reachable on the system D-Bus, hyprlock SHALL treat a lid-closed transition as an idle transition and a lid-open transition as a resume transition, regardless of whether the session suspends. Lid transitions MUST be detected only on state changes, not on the initial state at lock time. If UPower is unreachable, hyprlock SHALL log a warning and disable this trigger without affecting other triggers.
+When `auth:lid_switch_idle` (integer, 1) is enabled and the UPower service is reachable on the system D-Bus, hyprlock SHALL treat a lid-closed transition as an idle transition and a lid-open transition as a resume transition, regardless of whether the session suspends. Lid transitions MUST be detected on state changes, and the initial state at lock time MUST NOT synthesize a transition; if the initial state indicates the lid is closed, hyprlock MUST pause authentication as soon as the state is read, so the fingerprint sensor is not left claimed while the lid is closed. If UPower is unreachable, hyprlock SHALL log a warning and disable this trigger without affecting other triggers.
 
 #### Scenario: Lid closed while the machine stays awake
 - **WHEN** the lid is closed on a machine configured not to sleep (e.g. on AC power)
@@ -61,6 +61,10 @@ When `auth:lid_switch_idle` (integer, 1) is enabled and the UPower service is re
 #### Scenario: Lid open after inactivity
 - **WHEN** the lid is opened after any period of inactivity while locked
 - **THEN** authentication implementations resume immediately and the fingerprint sensor is ready to be used without any other input
+
+#### Scenario: Lock screen starts with the lid closed
+- **WHEN** hyprlock starts while the lid is already closed (e.g. launched by a compositor idle lock after the lid was closed)
+- **THEN** the fingerprint sensor is not left in the verifying state, and opening the lid resumes authentication with the sensor ready to use
 
 #### Scenario: UPower unavailable
 - **WHEN** the UPower service is not reachable while `auth:lid_switch_idle` is enabled
